@@ -1,5 +1,5 @@
 # Insper-Olimpics
-# Arthur Coser Pedreira, Arthur Massad Costa, Jorge Hungria e Prado
+Arthur Coser Pedreira, Arthur Massad Costa, Jorge Hungria e Prado
 # Objetivo do jogo:
 Haverá uma competição olímpica que você é um outro candidato vão disputar, haverão 3 provas: corrida de 100 metros, salto em distância e lançamento de dardo. O vencedor será quem ganhar 2 dos 3 jogos.
 # Instruções do jogo:
@@ -11,3 +11,4 @@ Por fim o lançamento de dardo possui dois mecanismos, o jogador aperta uma tecl
 # Funcionamento do Jogo:
 [link]
 # Insper - 1°Ano de engenharia - 1°C 2026
+Arthur Coser Pedreira, Arthur Massad Costa, Jorge Hungria e Prado
