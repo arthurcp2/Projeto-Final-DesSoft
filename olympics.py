@@ -290,3 +290,460 @@ def _show_event_result(event_name, v1, v2, winner, unit, scores=None): #Feito co
 
     return winner
 
+#  Tela final
+
+def final_screen(scores, event_results): #Feito com ajuda do ClaudeCode
+    overall = 0 if scores[0] > scores[1] else (1 if scores[1] > scores[0] else -1)
+    names = ["PLAYER 1", "PLAYER 2"]
+    colors = [RED, BLUE]
+    event_names = ["100M SPRINT", "LONG JUMP", "JAVELIN THROW"]
+
+    if overall == -1:
+        end_sprites = [DRAW_SPRITES[0], DRAW_SPRITES[1]]
+    else:
+        end_sprites = [MEDAL_SPRITES[0] if overall == 0 else LOSE_SPRITES[0],
+                       MEDAL_SPRITES[1] if overall == 1 else LOSE_SPRITES[1]]
+
+    t = 0
+    while True:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_r:
+                    return "restart"
+                if e.key == pygame.K_ESCAPE:
+                    pygame.quit(); sys.exit()
+
+        screen.fill(SKY)
+        pygame.draw.rect(screen, GREEN, (0, 500, WIDTH, 100))
+        pygame.draw.rect(screen, TRACK, (0, 500, WIDTH, 20))
+
+        draw_text_center(screen, "FINAL RESULTS", font_big, BLACK, 20)
+
+        # caixa de pontos
+        for i in range(2):
+            bx = 100 + i * 500
+            pygame.draw.rect(screen, colors[i], (bx, 82, 260, 90), border_radius=16)
+            draw_text(screen, names[i], font_med, WHITE, bx + 15, 92)
+            draw_text(screen, f"{scores[i]} WINS", font_big, WHITE, bx + 15, 132)
+
+        # Tela do vencedor
+        if overall == -1:
+            draw_text_center(screen, "TIE!", font_big, GOLD, 196)
+        else:
+            draw_text_center(screen, f"CHAMPION: {names[overall]}!", font_big, GOLD, 196)
+
+        # Tabela de resultados
+        tx, tw = 175, 650
+        pygame.draw.rect(screen, WHITE, (tx, 252, tw, 120), border_radius=10)
+        pygame.draw.rect(screen, DARK_GRAY, (tx, 252, tw, 120), 2, border_radius=10)
+        draw_text(screen, "EVENT",    font_tiny, DARK_GRAY, tx + 12,  260)
+        draw_text(screen, "PLAYER 1", font_tiny, RED,       tx + 220, 260)
+        draw_text(screen, "PLAYER 2", font_tiny, BLUE,      tx + 360, 260)
+        draw_text(screen, "WINNER",   font_tiny, DARK_GRAY, tx + 510, 260)
+        pygame.draw.line(screen, DARK_GRAY, (tx, 278), (tx + tw, 278), 1)
+
+        for i, (p1v, p2v, wstr, unit) in enumerate(event_results):
+            y = 290 + i * 26
+            draw_text(screen, event_names[i], font_tiny, BLACK,     tx + 12,  y)
+            p1s = "DNF" if (p1v >= 9000 or p1v < 0) else f"{p1v:.2f}{unit}"
+            p2s = "DNF" if (p2v >= 9000 or p2v < 0) else f"{p2v:.2f}{unit}"
+            draw_text(screen, p1s,           font_tiny, RED,        tx + 220, y)
+            draw_text(screen, p2s,           font_tiny, BLUE,       tx + 360, y)
+            draw_text(screen, wstr,          font_tiny, DARK_GRAY,  tx + 510, y)
+
+        draw_text_center(screen, "PRESS R TO PLAY AGAIN   ESC TO QUIT", font_small, DARK_GRAY, 388)
+
+
+        draw_outcome_sprite(screen, end_sprites[0], 80,         500, scale=6, t=t)
+        draw_outcome_sprite(screen, end_sprites[1], WIDTH - 80, 500, scale=6, t=t)
+        t += 1
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def main_game(): #Feito com ajuda do ClaudeCode
+    global scores, event_results
+    scores = [0, 0]
+    event_results = []
+
+    # Evento 1
+    pygame.mixer.music.set_volume(0.3)
+    w, v1, v2 = event_sprint_v2()
+    scores[w] += 1
+    event_results.append((v1, v2, f"P{w+1}", "s"))
+    pygame.mixer.music.set_volume(1.0)
+    _show_event_result("100M SPRINT", v1, v2, w, "s", scores)
+
+    # Evento 2
+    pygame.mixer.music.set_volume(0.3)
+    w, v1, v2 = event_long_jump_v2()
+    scores[w] += 1
+    event_results.append((v1, v2, f"P{w+1}", "m"))
+    pygame.mixer.music.set_volume(1.0)
+    _show_event_result("LONG JUMP", v1, v2, w, "m", scores)
+
+    # Evento 3
+    pygame.mixer.music.set_volume(0.3)
+    w, v1, v2 = event_javelin_v2()
+    scores[w] += 1
+    event_results.append((v1, v2, f"P{w+1}", "m"))
+    pygame.mixer.music.set_volume(1.0)
+    _show_event_result("JAVELIN THROW", v1, v2, w, "m", scores)
+
+    return final_screen(scores, event_results)
+
+
+
+def event_sprint_v2(): #Feito com ajuda do ClaudeCode
+    RACE_DIST = 100.0
+    pos   = [0.0, 0.0]
+    vel   = [0.0, 0.0]
+    frame = [0, 0]
+    frame_timer = [0.0, 0.0]
+    finished = [False, False]
+    finish_time = [None, None]
+    time_start = None
+
+    TRACK_Y = 290
+    TRACK_H = 90
+    LANE_Y  = [TRACK_Y + 30, TRACK_Y + 65]
+
+    finish_x = WIDTH - 100
+    for cd in range(3, 0, -1):
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+        screen.fill(SKY)
+        pygame.draw.rect(screen, GREEN, (0, TRACK_Y + TRACK_H, WIDTH, HEIGHT - TRACK_Y - TRACK_H))
+        pygame.draw.rect(screen, TRACK, (0, TRACK_Y, WIDTH, TRACK_H))
+        pygame.draw.line(screen, WHITE, (0, TRACK_Y + TRACK_H // 2),
+                         (WIDTH, TRACK_Y + TRACK_H // 2), 1)
+        for yy in range(TRACK_Y, TRACK_Y + TRACK_H, 10):
+            c = WHITE if (yy // 10) % 2 == 0 else BLACK
+            pygame.draw.rect(screen, c, (finish_x, yy, 15, 10))
+        for i in range(2):
+            draw_sprite(screen, RUN_FRAMES[i], 0, 80, LANE_Y[i], scale=2)
+        draw_text_center(screen, "100M SPRINT", font_big, BLACK, 60)
+        draw_text_center(screen, "P1 PRESS A   P2 PRESS L   FAST!", font_small, WHITE, 150)
+        draw_text_center(screen, str(cd), font_big, YELLOW, 220)
+        pygame.display.flip()
+        pygame.time.wait(1000)
+
+    screen.fill(SKY)
+    pygame.draw.rect(screen, GREEN, (0, TRACK_Y + TRACK_H, WIDTH, HEIGHT - TRACK_Y - TRACK_H))
+    pygame.draw.rect(screen, TRACK, (0, TRACK_Y, WIDTH, TRACK_H))
+    pygame.draw.line(screen, WHITE, (0, TRACK_Y + TRACK_H // 2),
+                     (WIDTH, TRACK_Y + TRACK_H // 2), 1)
+    for yy in range(TRACK_Y, TRACK_Y + TRACK_H, 10):
+        c = WHITE if (yy // 10) % 2 == 0 else BLACK
+        pygame.draw.rect(screen, c, (finish_x, yy, 15, 10))
+    for i in range(2):
+        draw_sprite(screen, RUN_FRAMES[i], 0, 80, LANE_Y[i], scale=2)
+    draw_text_center(screen, "GO!", font_big, RED, 220)
+    pygame.display.flip()
+    pygame.time.wait(600)
+
+    time_start = pygame.time.get_ticks()
+    first_finish_at = None
+    DNF_TIMEOUT = 4.0
+    last_press  = [0, 0]   #Tempo em milissegundos da última tecla pressionada 
+    FAST_IV   = 0.10       # intervalo que fornece impulso máximo
+    SLOW_IV   = 0.55       # intervalo que fornece impulso minimo
+    MAX_BOOST = 4.0
+    MIN_BOOST = 0.2
+    DECAY     = 3.0        #desaceleracao da velocidade vel -= DECAY * vel * dt
+
+    while True:
+        dt = clock.tick(FPS) / 1000.0
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_a and not finished[0]:
+                    now = pygame.time.get_ticks()
+                    iv  = min((now - last_press[0]) / 1000.0, SLOW_IV)
+                    t   = (iv - FAST_IV) / (SLOW_IV - FAST_IV)
+                    vel[0] = min(vel[0] + MAX_BOOST * (1 - t) + MIN_BOOST * t, 13.0)
+                    last_press[0] = now
+                if e.key == pygame.K_l and not finished[1]:
+                    now = pygame.time.get_ticks()
+                    iv  = min((now - last_press[1]) / 1000.0, SLOW_IV)
+                    t   = (iv - FAST_IV) / (SLOW_IV - FAST_IV)
+                    vel[1] = min(vel[1] + MAX_BOOST * (1 - t) + MIN_BOOST * t, 13.0)
+                    last_press[1] = now
+
+        for i in range(2):
+            if not finished[i]:
+                vel[i] = max(0, vel[i] - DECAY * vel[i] * dt)
+                pos[i] += vel[i] * dt
+                if pos[i] >= RACE_DIST:
+                    pos[i] = RACE_DIST
+                    finished[i] = True
+                    finish_time[i] = (pygame.time.get_ticks() - time_start) / 1000.0
+                frame_timer[i] += vel[i] * dt
+                if frame_timer[i] > 0.12:
+                    frame[i] += 1
+                    frame_timer[i] = 0
+
+        if any(finished) and not all(finished) and first_finish_at is None:
+            first_finish_at = pygame.time.get_ticks()
+        if all(finished):
+            break
+        if first_finish_at is not None:
+            if (pygame.time.get_ticks() - first_finish_at) / 1000.0 >= DNF_TIMEOUT:
+                break
+
+        screen.fill(SKY)
+        pygame.draw.rect(screen, GREEN, (0, TRACK_Y + TRACK_H, WIDTH, HEIGHT - TRACK_Y - TRACK_H))
+        pygame.draw.rect(screen, TRACK, (0, TRACK_Y, WIDTH, TRACK_H))
+        pygame.draw.line(screen, WHITE, (0, TRACK_Y + TRACK_H // 2),
+                         (WIDTH, TRACK_Y + TRACK_H // 2), 1)
+        finish_x = WIDTH - 100
+        for yy in range(TRACK_Y, TRACK_Y + TRACK_H, 10):
+            c = WHITE if (yy // 10) % 2 == 0 else BLACK
+            pygame.draw.rect(screen, c, (finish_x, yy, 15, 10))
+
+        draw_text_center(screen, "100M SPRINT", font_big, BLACK, 20)
+        draw_text_center(screen, "P1 PRESS A   P2 PRESS L   FAST!", font_tiny, WHITE, 75)
+
+        for i, (clr, lbl) in enumerate([(RED, "P1"), (BLUE, "P2")]):
+            ax = int(80 + (pos[i] / RACE_DIST) * (finish_x - 90))
+            ay = LANE_Y[i]
+            draw_sprite(screen, RUN_FRAMES[i], frame[i], ax, ay, scale=2)
+            _lw = font_tiny.size(lbl)[0]
+            draw_text(screen, lbl, font_tiny, clr, ax - _lw // 2 + 4, ay - 80)
+
+            bar_y = TRACK_Y + TRACK_H + 15 + i * 30
+            pygame.draw.rect(screen, LIGHT_GRAY, (80, bar_y, WIDTH - 160, 20), border_radius=4)
+            fv = int((pos[i] / RACE_DIST) * (WIDTH - 160))
+            pygame.draw.rect(screen, clr, (80, bar_y, fv, 20), border_radius=4)
+            draw_text(screen, f"{lbl}: {pos[i]:.1f}", font_tiny, clr, 10, bar_y + 2)
+
+        if first_finish_at is not None and not all(finished):
+            remaining = max(0.0, DNF_TIMEOUT - (pygame.time.get_ticks() - first_finish_at) / 1000.0)
+            draw_text_center(screen, f"DNF IN {remaining:.1f}S", font_med, ORANGE, 130)
+
+        pygame.display.flip()
+
+    # caso acabe em empate
+    t0 = finish_time[0] if finish_time[0] is not None else 9999.0
+    t1 = finish_time[1] if finish_time[1] is not None else 9999.0
+    winner = 0 if t0 <= t1 else 1
+    return winner, t0, t1
+
+
+def event_long_jump_v2(): #Feito com ajuda do ClaudeCode
+    CAM_TARGET_X = 300
+    RUNWAY       = 600.0
+    FOUL_LINE    = RUNWAY + 70  # linha de penalidade
+
+    while True:  # caso os dois atletas recebam penalidade eles tentarao novamente
+        results = []
+
+        for player_idx in range(2):
+            color    = RED if player_idx == 0 else BLUE
+            label    = "PLAYER 1" if player_idx == 0 else "PLAYER 2"
+            run_key  = pygame.K_a if player_idx == 0 else pygame.K_l
+            jump_key = pygame.K_SPACE if player_idx == 0 else pygame.K_RETURN
+            rk_name  = "A" if player_idx == 0 else "L"
+            jk_name  = "SPACE" if player_idx == 0 else "ENTER"
+
+            for cd in range(3, 0, -1):
+                for e in pygame.event.get():
+                    if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                screen.fill(SKY)
+                cd_bnd = int(RUNWAY + 82)
+                pygame.draw.rect(screen, SAND, (0, 390, WIDTH, 210))
+                pygame.draw.rect(screen, GREEN, (0, 420, min(cd_bnd, WIDTH), 180))
+                pygame.draw.rect(screen, TRACK, (0, 390, min(cd_bnd, WIDTH), 35))
+                pygame.draw.rect(screen, WHITE, (int(FOUL_LINE), 390, 12, 35))
+                draw_sprite(screen, RUN_FRAMES[player_idx], 0, 80, 390, scale=2)
+                draw_text_center(screen, "LONG JUMP", font_big, BLACK, 40)
+                draw_text_center(screen, f"{label} - GET READY!", font_med, color, 120)
+                draw_text_center(screen, f"PRESS {rk_name} TO RUN   {jk_name} TO JUMP", font_small, DARK_GRAY, 190)
+                draw_text_center(screen, str(cd), font_big, YELLOW, 280)
+                pygame.display.flip()
+                pygame.time.wait(1000)
+
+            vel      = 0.0
+            pos_x    = 0.0
+            frame    = 0
+            ft       = 0.0
+            jumped   = False
+            pre_jump = False   # Delay do pulo
+            pre_jump_vel = 0.0
+            foul     = False
+            jvx      = 0.0
+            jvy      = 0.0
+            ax       = 80.0
+            ay       = 390.0
+            in_air   = False
+            distance = 0.0
+            jsx      = 0.0
+            GY       = 390.0
+            started         = False
+            cam_x           = 0.0
+            jump_frame      = 0
+            jump_timer      = 0.0
+            last_press_time = 0    # tempo da ultima tecla pressionada
+            FAST_IV   = 0.10
+            SLOW_IV   = 0.55
+            MAX_BOOST = 4.0
+            MIN_BOOST = 0.2
+            DECAY     = 3.0
+
+            while True:
+                dt = clock.tick(FPS) / 1000.0
+                for e in pygame.event.get():
+                    if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                    if e.type == pygame.KEYDOWN:
+                        if e.key == run_key and not jumped:
+                            now = pygame.time.get_ticks()
+                            iv  = min((now - last_press_time) / 1000.0, SLOW_IV)
+                            t   = (iv - FAST_IV) / (SLOW_IV - FAST_IV)
+                            vel = min(vel + MAX_BOOST * (1 - t) + MIN_BOOST * t, 11.0)
+                            last_press_time = now
+                            started = True
+                        if e.key == jump_key and not jumped and started:
+                            jumped = True
+                            jsx = ax
+                            if jsx >= FOUL_LINE:
+                                foul = True
+                                distance = -1.0
+                            else:
+                                pre_jump = True
+                                pre_jump_vel = vel
+                                jump_frame = 0
+                                jump_timer = 0.0
+
+                if not jumped:
+                    vel = max(0, vel - DECAY * vel * dt)
+                    ax = min(80.0 + pos_x, RUNWAY + 80)
+                    pos_x += vel * dt * 40
+                    ft += vel * dt
+                    if ft > 0.12: frame += 1; ft = 0
+                    if ax >= RUNWAY + 80:
+                        ax = RUNWAY + 80
+                elif pre_jump:
+                    # Continue se movendo na velocidade de um pulo enquanto os quadros de animação inicial são reproduzidos.
+                    ax += pre_jump_vel * dt * 40
+                    if ax >= FOUL_LINE:
+                        pre_jump = False
+                        foul = True
+                        distance = -1.0
+                    else:
+                        jump_timer += dt
+                        if jump_timer > 0.09:
+                            jump_frame += 1
+                            jump_timer = 0.0
+                            if jump_frame >= 4:
+                                pre_jump = False
+                                in_air = True
+                                jvx = pre_jump_vel
+                                jvy = -9.5 - pre_jump_vel * 0.35
+                elif in_air:
+                    jvy += 18.0 * dt
+                    ax  += jvx * dt * 55
+                    ay  += jvy * 55 * dt
+                    jump_timer += dt
+                    if jump_timer > 0.09:
+                        jump_frame = min(jump_frame + 1, len(JUMP_FRAMES[player_idx]) - 2)
+                        jump_timer = 0.0
+                    if ay >= GY:
+                        ay = GY; in_air = False
+                        jump_frame = len(JUMP_FRAMES[player_idx]) - 1
+                        distance = max(0.0, (ax - FOUL_LINE) * 0.01)
+
+                if in_air or pre_jump or not jumped:
+                    cam_x = max(0.0, ax - CAM_TARGET_X)
+
+                bnd = int(RUNWAY + 82 - cam_x)
+                screen.fill(SKY)
+                pygame.draw.rect(screen, SAND, (0, 390, WIDTH, 210))
+                if bnd > 0:
+                    pygame.draw.rect(screen, GREEN, (0, 420, min(bnd, WIDTH), 180))
+                    pygame.draw.rect(screen, TRACK, (0, 390, min(bnd, WIDTH), 35))
+
+                # linha de falta muda de cor
+                tb_sx = int(FOUL_LINE - cam_x)
+                if -15 < tb_sx < WIDTH:
+                    board_color = RED if foul else WHITE
+                    pygame.draw.rect(screen, board_color, (tb_sx, 390, 12, 35))
+
+                for m in range(0, 13):  # 0m a 12m, 100px por metro
+                    wrx = int(FOUL_LINE + m * 100)
+                    srx = wrx - int(cam_x)
+                    if 0 <= srx < WIDTH:
+                        pygame.draw.line(screen, DARK_GRAY, (srx, 408), (srx, 425), 2)
+                        draw_text(screen, f"{m}m", font_tiny, DARK_GRAY, srx - 8, 427)
+
+                draw_text_center(screen, "LONG JUMP", font_big, BLACK, 20)
+                draw_text_center(screen, f"{label}: PRESS {rk_name} TO RUN  {jk_name} TO JUMP",
+                                 font_tiny, color, 80)
+                pygame.draw.rect(screen, LIGHT_GRAY, (80, 130, 300, 22), border_radius=4)
+                fv2 = int((vel / 11.0) * 300)
+                pygame.draw.rect(screen, color, (80, 130, fv2, 22), border_radius=4)
+                draw_text(screen, f"SPEED: {vel:.1f}", font_tiny, BLACK, 80, 108)
+
+                asx = int(ax - cam_x)
+                if foul:
+                    draw_sprite(screen, RUN_FRAMES[player_idx], 0, asx, int(ay), scale=2)
+                    draw_text_center(screen, "FOUL! DISQUALIFIED", font_med, RED, 300)
+                elif pre_jump or in_air:
+                    draw_sprite(screen, JUMP_FRAMES[player_idx], jump_frame, asx, int(ay), scale=2)
+                elif jumped:
+                    draw_sprite(screen, JUMP_FRAMES[player_idx], len(JUMP_FRAMES[player_idx]) - 1,
+                                asx, int(ay) + 14, scale=2)
+                    foul_sx = int(FOUL_LINE - cam_x)
+                    land_sx = int(ax - cam_x)
+                    pygame.draw.line(screen, GOLD, (foul_sx, 390), (land_sx, 390), 4)
+                    draw_text(screen, f"{distance:.2f}M!", font_med, GOLD, asx - 30, int(ay) - 80)
+                else:
+                    draw_sprite(screen, RUN_FRAMES[player_idx], frame, asx, int(ay), scale=2)
+
+                if (not in_air and not pre_jump and jumped) or foul:
+                    draw_text_center(screen, "PRESS ANY KEY TO CONTINUE",
+                                     font_tiny, DARK_GRAY, 530)
+                    pygame.display.flip()
+                    w2 = True
+                    while w2:
+                        for e in pygame.event.get():
+                            if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                            if e.type == pygame.KEYDOWN: w2 = False
+                    break
+
+                pygame.display.flip()
+
+            results.append(distance)
+
+        # Mensagem de repeticao
+        if results[0] < 0 and results[1] < 0:
+            t_start = pygame.time.get_ticks()
+            anim_t = 0
+            while pygame.time.get_ticks() - t_start < 2500:
+                for e in pygame.event.get():
+                    if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                    if e.type == pygame.KEYDOWN: break
+                screen.fill(SKY)
+                pygame.draw.rect(screen, GREEN, (0, 480, WIDTH, 120))
+                pygame.draw.rect(screen, TRACK, (0, 480, WIDTH, 20))
+                draw_outcome_sprite(screen, DRAW_SPRITES[0], 80,         480, scale=4, t=anim_t)
+                draw_outcome_sprite(screen, DRAW_SPRITES[1], WIDTH - 80, 480, scale=4, t=anim_t)
+                draw_text_center(screen, "BOTH DISQUALIFIED!", font_med, RED, 230)
+                draw_text_center(screen, "RETRYING EVENT...", font_small, DARK_GRAY, 300)
+                pygame.display.flip()
+                clock.tick(FPS)
+                anim_t += 1
+            continue
+
+        if results[0] < 0:
+            winner = 1
+        elif results[1] < 0:
+            winner = 0
+        else:
+            winner = 0 if results[0] >= results[1] else 1
+        break
+
+    return winner, results[0], results[1]
+
