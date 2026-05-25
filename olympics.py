@@ -747,3 +747,259 @@ def event_long_jump_v2(): #Feito com ajuda do ClaudeCode
 
     return winner, results[0], results[1]
 
+def _javelin_frame(angle_deg):
+    """Map flight angle (degrees, positive = upward) to Javelin spritesheet frame."""
+    if angle_deg >= 52.5: return 0   # 60° +
+    if angle_deg >= 37.5: return 1   # 45° +
+    if angle_deg >= 25.0: return 2   # 30° +
+    if angle_deg >= 10.0: return 3   # 20° +
+    if angle_deg >= -10.0: return 4  # 0° 
+    if angle_deg >= -25.0: return 5  # 20° -
+    if angle_deg >= -37.5: return 6  # 30° -
+    if angle_deg >= -52.5: return 7  # 45° -
+    return 8                          # 60° -
+
+
+def event_javelin_v2(): #Feito com ajuda do ClaudeCode
+    results = []
+    CAM_TARGET_JX = int(WIDTH * 0.35)
+
+    for player_idx in range(2):
+        color      = RED if player_idx == 0 else BLUE
+        label      = "PLAYER 1" if player_idx == 0 else "PLAYER 2"
+        action_key = pygame.K_a if player_idx == 0 else pygame.K_l
+        key_name   = "A" if player_idx == 0 else "L"
+
+        AX = 130
+        AY = 460          # chao
+        THROW_LINE = 400  # linha de lancamento
+        n_frames = len(JAVELIN_THROW_FRAMES[player_idx])  # ultimo frame = lancamento
+
+        for cd in range(3, 0, -1):
+            for e in pygame.event.get():
+                if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+            screen.fill(SKY)
+            if THROW_LINE > 0:
+                pygame.draw.rect(screen, TRACK, (0, AY, min(THROW_LINE, WIDTH), HEIGHT - AY))
+            if THROW_LINE < WIDTH:
+                pygame.draw.rect(screen, GREEN, (THROW_LINE, AY, WIDTH - THROW_LINE, HEIGHT - AY))
+            pygame.draw.line(screen, WHITE, (THROW_LINE, AY - 20), (THROW_LINE, AY + 10), 3)
+            draw_text(screen, "LINE", font_tiny, WHITE, THROW_LINE - 14, AY - 36)
+            draw_sprite(screen, JAVELIN_THROW_FRAMES[player_idx], 0, AX, AY, scale=2)
+            draw_text_center(screen, "JAVELIN THROW", font_big, BLACK, 30)
+            draw_text_center(screen, f"{label} - GET READY!", font_med, color, 110)
+            draw_text_center(screen, f"PRESS {key_name} FOR SPEED THEN ANGLE", font_small, DARK_GRAY, 185)
+            draw_text_center(screen, str(cd), font_big, YELLOW, 280)
+            pygame.display.flip()
+            pygame.time.wait(1000)
+
+        speed        = 0.0
+        speed_dir    = 1
+        speed_osc    = 130.0
+        locked_speed = 0.0
+        angle        = 45.0
+        angle_dir    = 1
+        angle_speed  = 110.0
+        locked_angle = 0.0
+        # velocidade → movimento → angulo → pose de lancamento → voo
+        phase        = "speed"
+
+        run_frame        = 0
+        run_timer        = 0.0
+        walk_frames_done = 0     # contagem de frames do movimento
+        throw_pose_timer = 0.0
+        ax_world         = float(AX)   
+
+        jx = jy = jvx = jvy = 0.0
+        distance    = 0.0
+        flight_done = False
+        cam_x       = 0.0
+
+        while True:
+            dt = clock.tick(FPS) / 1000.0
+            for e in pygame.event.get():
+                if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                if e.type == pygame.KEYDOWN and e.key == action_key:
+                    if phase == "speed":
+                        locked_speed = speed
+                        phase = "walk"
+                        run_frame = 0
+                        run_timer = 0.0
+                        walk_frames_done = 0
+                    elif phase == "angle":
+                        locked_angle = angle
+                        phase = "throw_pose"
+                        throw_pose_timer = 0.0
+
+            if phase == "speed":
+                speed += speed_dir * speed_osc * dt
+                if speed >= 100: speed = 100; speed_dir = -1
+                elif speed <= 0: speed = 0;   speed_dir = 1
+            elif phase == "walk":
+                ax_world = min(ax_world + (30 + locked_speed / 100.0 * 120) * dt,
+                               THROW_LINE - 30)
+                run_timer += dt
+                if run_timer > 0.10:
+                    run_timer = 0.0
+                    run_frame = (run_frame + 1) % (n_frames - 1)
+                    walk_frames_done += 1
+                    if walk_frames_done >= n_frames - 1:
+                        phase = "angle"
+            elif phase == "angle":
+                angle += angle_dir * angle_speed * dt
+                if angle >= 78: angle = 78; angle_dir = -1
+                elif angle <= 12: angle = 12; angle_dir = 1
+                run_frame = n_frames - 2   # paralizar na ultima frame
+            elif phase == "throw_pose":
+                run_frame = n_frames - 1
+                throw_pose_timer += dt
+                if throw_pose_timer >= 0.4:
+                    phase = "flight"
+                    sp  = 6 + locked_speed / 100.0 * 16
+                    rad = math.radians(locked_angle)
+                    jx  = float(ax_world + 50)
+                    jy  = float(AY - 55)
+                    jvx = math.cos(rad) * sp
+                    jvy = -math.sin(rad) * sp
+            elif phase == "flight" and not flight_done:
+                jvx *= (1 - 0.35 * dt)
+                jvy += 11.0 * dt
+                jx  += jvx * 30 * dt
+                jy  += jvy * 30 * dt
+                if jy >= AY - 22:
+                    jy = AY - 22; flight_done = True
+                    raw = (jx - THROW_LINE) * 0.07
+                    distance = raw if raw > 0 else -1.0
+
+            if phase == "flight" and not flight_done:
+                cam_x = max(0.0, jx - CAM_TARGET_JX)
+            elif phase != "flight":
+                cam_x = 0.0
+
+            screen.fill(SKY)
+            te_sx = int(THROW_LINE - cam_x)
+
+            #  track 
+            if te_sx > 0:
+                pygame.draw.rect(screen, TRACK, (0, AY, min(te_sx, WIDTH), HEIGHT - AY))
+
+            # setor de queda(da vara)
+            gs = max(0, te_sx)
+            if gs < WIDTH:
+                pygame.draw.rect(screen, GREEN, (gs, AY, WIDTH - gs, HEIGHT - AY))
+
+            # linha de lancamento
+            if 0 <= te_sx <= WIDTH:
+                pygame.draw.line(screen, WHITE, (te_sx, AY - 20), (te_sx, AY + 10), 3)
+                draw_text(screen, "LINE", font_tiny, WHITE, te_sx - 14, AY - 36)
+
+            # Distancia do lancamento
+            for m in range(0, 90, 10):
+                world_rx  = THROW_LINE + int(m / 0.07)
+                screen_rx = int(world_rx - cam_x)
+                if 0 <= screen_rx < WIDTH:
+                    pygame.draw.line(screen, DARK_GRAY, (screen_rx, AY), (screen_rx, AY + 14), 2)
+                    draw_text(screen, f"{m}m", font_tiny, DARK_GRAY, screen_rx - 8, AY + 16)
+
+            draw_text_center(screen, "JAVELIN THROW", font_big, BLACK, 20)
+            _phase_hint = {
+                "speed":      f"PRESS {key_name} TO LOCK SPEED",
+                "walk":       "RUNNING...",
+                "angle":      f"PRESS {key_name} TO LOCK ANGLE",
+                "throw_pose": "THROWING!",
+                "flight":     "JAVELIN IN FLIGHT!",
+            }.get(phase, "")
+            draw_text_center(screen, f"{label}  -  {_phase_hint}", font_small, color, 78)
+
+            ax_sx = int(ax_world - cam_x)
+            draw_sprite(screen, JAVELIN_THROW_FRAMES[player_idx], run_frame, ax_sx, AY, scale=2)
+
+            bx, by, bw, bh = 60, 310, 340, 32
+            ds = locked_speed if phase != "speed" else speed
+
+            if phase == "speed":
+                pygame.draw.rect(screen, LIGHT_GRAY, (bx, by, bw, bh), border_radius=6)
+                fc = GREEN if ds < 60 else YELLOW if ds < 85 else RED
+                pygame.draw.rect(screen, fc, (bx, by, int(ds / 100 * bw), bh), border_radius=6)
+                pygame.draw.rect(screen, BLACK, (bx, by, bw, bh), 2, border_radius=6)
+                draw_text(screen, f"SPEED: {ds:.0f}", font_small, BLACK, bx, by - 28)
+                draw_text(screen, "PRESS TO LOCK SPEED!", font_small, DARK_GRAY, bx, by + 40)
+            elif phase == "angle":
+                draw_text(screen, f"SPEED: {ds:.0f}", font_small, BLACK, bx, by - 54)
+                af = int((angle - 12) / (78 - 12) * bw)
+                pygame.draw.rect(screen, LIGHT_GRAY, (bx, by, bw, bh), border_radius=6)
+                pygame.draw.rect(screen, RED, (bx, by, af, bh), border_radius=6)
+                pygame.draw.rect(screen, BLACK, (bx, by, bw, bh), 2, border_radius=6)
+                draw_text(screen, f"ANGLE: {angle:.0f}", font_small, BLACK, bx, by - 28)
+                draw_text(screen, "PRESS TO LOCK ANGLE!", font_small, DARK_GRAY, bx, by + 40)
+                rad2 = math.radians(angle)
+                ae   = (ax_sx + int(math.cos(rad2) * 60), AY - 40 - int(math.sin(rad2) * 60))
+                pygame.draw.line(screen, RED, (ax_sx, AY - 40), ae, 3)
+                pygame.draw.polygon(screen, RED, [
+                    ae,
+                    (ae[0] - int(math.cos(rad2 - 0.4) * 12), ae[1] + int(math.sin(rad2 - 0.4) * 12)),
+                    (ae[0] - int(math.cos(rad2 + 0.4) * 12), ae[1] + int(math.sin(rad2 + 0.4) * 12)),
+                ])
+            elif phase in ("throw_pose", "flight"):
+                draw_text(screen, f"SPEED: {ds:.0f}", font_small, BLACK, bx, by - 28)
+                draw_text(screen, f"ANGLE: {locked_angle:.0f}", font_small, BLACK, bx, by + 8)
+
+            if phase == "flight":
+                jx_sx   = int(jx - cam_x)
+                ang_now = math.degrees(math.atan2(-jvy, jvx))
+                jframe  = _javelin_frame(ang_now if not flight_done else -90)
+                jf_surf = JAVELIN_FRAMES[jframe]
+                jfw     = jf_surf.get_width() * 2
+                jfh     = jf_surf.get_height() * 2
+                screen.blit(pygame.transform.scale(jf_surf, (jfw, jfh)),
+                            (jx_sx - jfw // 2, int(jy) - jfh // 2))
+                if flight_done:
+                    draw_text(screen, f"{distance:.2f}M!", font_med, GOLD,
+                              jx_sx - 25, int(jy) - 55)
+
+            if flight_done:
+                draw_text_center(screen, "PRESS ANY KEY TO CONTINUE",
+                                 font_tiny, DARK_GRAY, 555)
+                pygame.display.flip()
+                wt = True
+                while wt:
+                    for e in pygame.event.get():
+                        if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                        if e.type == pygame.KEYDOWN: wt = False
+                break
+
+            pygame.display.flip()
+
+        results.append(distance)
+
+    if results[0] < 0 and results[1] < 0:
+        winner = 0  # ambos DNF — P1 vence por desempate padrão
+    elif results[0] < 0:
+        
+        winner = 1
+    elif results[1] < 0:
+        winner = 0
+    else:
+        winner = 0 if results[0] >= results[1] else 1
+    return winner, results[0], results[1]
+
+
+if __name__ == "__main__":
+    _DEV_EVENTS = {
+        "event1": (event_sprint_v2,    "100M SPRINT",   "s"),
+        "event2": (event_long_jump_v2, "LONG JUMP",     "m"),
+        "event3": (event_javelin_v2,   "JAVELIN THROW", "m"),
+    }
+    while True:
+        action = start_screen()
+        if action in _DEV_EVENTS:
+            fn, name, unit = _DEV_EVENTS[action]
+            w, v1, v2 = fn()
+            _show_event_result(name, v1, v2, w, unit)
+            # loop para a tela de inicio
+        else:
+            result = main_game()
+            if result != "restart":
+                break
+    pygame.quit()
+    sys.exit()
