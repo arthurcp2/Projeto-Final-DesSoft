@@ -81,7 +81,7 @@ def draw_sprite(surf, frames, idx, cx, ground_y, scale=2):
     scaled = pygame.transform.scale(frame, (sw, sh))
     surf.blit(scaled, (int(cx) - sw // 2, int(ground_y) - sh))
 
-def draw_athlete(surf, x, y, color, frame): #Feito com ajuda do Claude Code
+def draw_athlete(surf, x, y, color, frame):
     """Simple stick-figure athlete. frame 0-3 for running animation."""
     # corpo
     pygame.draw.line(surf, color, (x, y - 30), (x, y - 10), 3)
@@ -122,7 +122,7 @@ def draw_athlete_jumping(surf, x, y, color):
     pygame.draw.line(surf, color, (x, y - 28), (x - 18, y - 38), 3)
     pygame.draw.line(surf, color, (x, y - 28), (x + 18, y - 38), 3)
 
-def draw_athlete_throw(surf, x, y, color, angle_deg): #Feito com ajuda do Claude Code
+def draw_athlete_throw(surf, x, y, color, angle_deg):
     """Athlete throwing: arm raised at angle."""
     pygame.draw.circle(surf, color, (x, y - 38), 8)
     pygame.draw.line(surf, color, (x, y - 30), (x, y - 10), 3)
@@ -143,9 +143,10 @@ def draw_outcome_sprite(surf, frames, cx, ground_y, scale=3, t=0):
     sh = frame.get_height() * scale
     surf.blit(pygame.transform.scale(frame, (sw, sh)), (cx - sw // 2, ground_y - sh))
 
+
 #  Tela de Inicio
 
-def start_screen(): #Feito com ajuda do ClaudeCode
+def start_screen():
     cx = WIDTH // 2
     _h, _v = 58, 34   # horizontal and vertical spacing between ring centres
     rings = [
@@ -237,7 +238,7 @@ def start_screen(): #Feito com ajuda do ClaudeCode
         clock.tick(FPS)
 
 
-def _show_event_result(event_name, v1, v2, winner, unit, scores=None): #Feito com ajuda do ClaudeCode
+def _show_event_result(event_name, v1, v2, winner, unit, scores=None):
     """Generic result screen. Returns winner index (0 or 1)."""
     names = ["PLAYER 1", "PLAYER 2"]
     wname = names[winner]
@@ -290,9 +291,10 @@ def _show_event_result(event_name, v1, v2, winner, unit, scores=None): #Feito co
 
     return winner
 
+
 #  Tela final
 
-def final_screen(scores, event_results): #Feito com ajuda do ClaudeCode
+def final_screen(scores, event_results):
     overall = 0 if scores[0] > scores[1] else (1 if scores[1] > scores[0] else -1)
     names = ["PLAYER 1", "PLAYER 2"]
     colors = [RED, BLUE]
@@ -363,7 +365,7 @@ def final_screen(scores, event_results): #Feito com ajuda do ClaudeCode
         clock.tick(FPS)
 
 
-def main_game(): #Feito com ajuda do ClaudeCode
+def main_game():
     global scores, event_results
     scores = [0, 0]
     event_results = []
@@ -396,7 +398,7 @@ def main_game(): #Feito com ajuda do ClaudeCode
 
 
 
-def event_sprint_v2(): #Feito com ajuda do ClaudeCode
+def event_sprint_v2():
     RACE_DIST = 100.0
     pos   = [0.0, 0.0]
     vel   = [0.0, 0.0]
@@ -533,7 +535,7 @@ def event_sprint_v2(): #Feito com ajuda do ClaudeCode
     return winner, t0, t1
 
 
-def event_long_jump_v2(): #Feito com ajuda do ClaudeCode
+def event_long_jump_v2():
     CAM_TARGET_X = 300
     RUNWAY       = 600.0
     FOUL_LINE    = RUNWAY + 70  # linha de penalidade
@@ -747,6 +749,7 @@ def event_long_jump_v2(): #Feito com ajuda do ClaudeCode
 
     return winner, results[0], results[1]
 
+
 def _javelin_frame(angle_deg):
     """Map flight angle (degrees, positive = upward) to Javelin spritesheet frame."""
     if angle_deg >= 52.5: return 0   # 60° +
@@ -760,7 +763,7 @@ def _javelin_frame(angle_deg):
     return 8                          # 60° -
 
 
-def event_javelin_v2(): #Feito com ajuda do ClaudeCode
+def event_javelin_v2():
     results = []
     CAM_TARGET_JX = int(WIDTH * 0.35)
 
