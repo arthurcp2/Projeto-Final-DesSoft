@@ -9,7 +9,7 @@ WIDTH, HEIGHT = 1000, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("1V1 OLYMPICS")
 
-# ── Sprite sheets ───────────────────────────────────────────────
+# ── Sprite sheets ─────────────────────────────────────────────── #Retiradas dessa referência: https://www.spriters-resource.com/nes/trackfield/asset/57610/
 _SPRITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "Spritesheets")
 
 def _load_frames(fname, fw=32, fh=32):
@@ -47,14 +47,14 @@ TRACK      = (180, 120, 60)
 GOLD       = (255, 215, 0)
 SILVER     = (192, 192, 192)
 
-_FONT_PATH  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "Font", "nintendo-nes-font.ttf")
+_FONT_PATH  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "Font", "nintendo-nes-font.ttf") #Fonte da Nintendo NES
 font_big    = pygame.font.Font(_FONT_PATH, 32)
 font_med    = pygame.font.Font(_FONT_PATH, 20)
 font_small  = pygame.font.Font(_FONT_PATH, 14)
 font_tiny   = pygame.font.Font(_FONT_PATH, 10)
 
 
-# Music
+# Music #Música extraida do jogo Track and Field 2 da Nintendo
 _MUSIC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "Music", "thememusic.mp3")
 pygame.mixer.music.load(_MUSIC_PATH)
 pygame.mixer.music.set_volume(1.0)
