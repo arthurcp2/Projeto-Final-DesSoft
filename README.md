@@ -10,7 +10,7 @@ No segundo jogo existem duas teclas funcionais, uma para correr e outra para sal
 
 Por fim o lançamento de dardo possui dois mecanismos, o jogador aperta uma tecla para definir a velocidade que o atleta corre e outra para definir o ângulo formado entre o chão e o lançamento da vara, o jogador 1 pressiona "a" para definir a velocidade e "a" para definir o ângulo e o jogador 2 "l" para velocidade e "l" para o ângulo
 # Funcionamento do Jogo:
-[link]
+[https://youtu.be/E_d-sl0dCHI]
 # Insper - 1°Ano de engenharia - 1°C 2026
 Arthur Coser Pedreira, Arthur Massad Costa, Jorge Hungria e Prado
 
